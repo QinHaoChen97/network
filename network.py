@@ -1,9 +1,10 @@
-# conding=utf-8
+# coding=utf-8
 import logging
 import copy
 import networkx as nx
 import time
 import json
+import traceback
 from webob import Response
 from datetime import datetime
 from operator import attrgetter
@@ -38,13 +39,14 @@ network_instance_name = 'network_api_app'
 
 class NetworkAwareness(app_manager.RyuApp):
     OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
-    WEIGHT_MODEL = {'hop': 'hop', 'delay': "delay", "bandwidth": "bandwidth", "ratio": "ratio"}
+    WEIGHT_MODEL = {'hop': 'hop', 'delay': "delay",
+                    "bandwidth": "bandwidth", "ratio": "ratio"}
     _CONTEXTS = {'wsgi': WSGIApplication}
 
     def __init__(self, *args, **kwargs):
         super(NetworkAwareness, self).__init__(*args, **kwargs)
         self.topology_api_app = self
-        self.name = "awareness"
+        self.name = "awareness"  # name is set for app_manager.lookup_service_brick(name)
         wsgi = kwargs['wsgi']
         wsgi.register(NetworkController, {network_instance_name: self})
 
@@ -62,13 +64,16 @@ class NetworkAwareness(app_manager.RyuApp):
         self.pre_link_to_port = {}
 
         # statistic information of port and link datastructure
-        self.port_stats = {}  # maintain a queue (len=5) of port stats to store statistic information
+        # maintain a queue (len=5) of port stats to store statistic information
+        self.port_stats = {}
         self.port_speed = {}  # maintain a queue (len=5) [b/s]
-        self.flow_stats = {}  # maintain a queue (len=5) of flow stats to store statistic information
+        # maintain a queue (len=5) of flow stats to store statistic information
+        self.flow_stats = {}
         self.flow_speed = {}  # maintain a queue (len=5) [b/s]
         self.stats = {}
         self.port_features = {}  # (dpid,port_no_):(config,state,curr_speed)
         self.used_bandwidth = {}
+        self.reserve_bandwidth = {}  # block-chain reserve bandwidth  [dpid][port_no][hostname]  ex. hostname = 'h1'
         # self.link_capacity = {} # a fixed number(10000Mb/s)
         self.ratio_dict = {}
         self.shortest_paths = None
@@ -77,7 +82,8 @@ class NetworkAwareness(app_manager.RyuApp):
         self.ratio_shortest_paths = None
         # delay detector information
         self.echo_latency = {}
-        self.sw_module = lookup_service_brick('switches')
+        self.sw_module = lookup_service_brick(
+            'switches')  # http://www.muzixing.com/pages/2015/09/08/ryumo-kuai-jian-tong-xin-ji-zhi-fen-xi.html
 
         self.weight = self.WEIGHT_MODEL[CONF.weight]
         self.SPOOFING_DEFENCE = setting.SPOOFING_DEFENCE
@@ -95,7 +101,7 @@ class NetworkAwareness(app_manager.RyuApp):
         """
         self.get_topology(None)
         while True:
-            self.show_topology()
+            # self.show_topology()
             hub.sleep(setting.DISCOVERY_PERIOD)
             self._monitor()
             self._save_bw_graph()
@@ -122,7 +128,8 @@ class NetworkAwareness(app_manager.RyuApp):
         if self.used_bandwidth:
             self.create_bw_graph()
         if self.weight == self.WEIGHT_MODEL['bandwidth']:
-            self.bw_shortest_paths = nx.shortest_path(self.graph, weight='bandwidth')
+            self.bw_shortest_paths = nx.shortest_path(
+                self.graph, weight='bandwidth')
         # hub.sleep(setting.MONITOR_PERIOD)
 
     def _detector(self):
@@ -134,7 +141,8 @@ class NetworkAwareness(app_manager.RyuApp):
         self.create_link_delay()
         # self.show_delay_statis()
         if self.weight == self.WEIGHT_MODEL['delay']:
-            self.delay_shortest_paths = nx.shortest_path(self.graph, weight='delay')
+            self.delay_shortest_paths = nx.shortest_path(
+                self.graph, weight='delay')
         #     hub.sleep(setting.DELAY_DETECTING_PERIOD)
 
     def _cal_ratio(self):
@@ -149,17 +157,19 @@ class NetworkAwareness(app_manager.RyuApp):
                 for dst_dpid in self.graph[src_dpid]:
                     if src_dpid == dst_dpid:
                         self.graph[src_dpid][dst_dpid]['ratio'] = 0
-                    elif (src_dpid, dst_dpid) in self.link_to_port and src_dpid in self.used_bandwidth and dst_dpid in self.used_bandwidth:
-                        (src_port, dst_port) = self.link_to_port[(src_dpid, dst_dpid)]
+                    elif (src_dpid,
+                          dst_dpid) in self.link_to_port and src_dpid in self.used_bandwidth and dst_dpid in self.used_bandwidth:
+                        (src_port, dst_port) = self.link_to_port[(
+                            src_dpid, dst_dpid)]
                         bw_src = self.used_bandwidth[src_dpid][src_port]
                         bw_dst = self.used_bandwidth[dst_dpid][dst_port]
                         bandwidth = min(bw_src, bw_dst)
                         ratio = alpha * self.graph[src_dpid][dst_dpid]['delay'] + \
-                            beta * bandwidth / link_capacity
+                                beta * bandwidth / link_capacity
                         self.ratio_dict[src_dpid][dst_dpid] = ratio
                         self.graph[src_dpid][dst_dpid]['ratio'] = ratio
-            self.ratio_shortest_paths = nx.shortest_path(self.graph, weight='ratio')
-
+            self.ratio_shortest_paths = nx.shortest_path(
+                self.graph, weight='ratio')
 
     # List the event list should be listened.
     events = [event.EventSwitchEnter,
@@ -185,11 +195,14 @@ class NetworkAwareness(app_manager.RyuApp):
         simple_paths = []
         try:
             if self.weight == self.WEIGHT_MODEL['hop']:
-                simple_paths = list(nx.shortest_simple_paths(self.graph, src, dst))
+                simple_paths = list(
+                    nx.shortest_simple_paths(self.graph, src, dst))
             elif self.weight == self.WEIGHT_MODEL['bandwidth']:
-                simple_paths = list(nx.shortest_simple_paths(self.graph, src, dst, weight='bandwidth'))
+                simple_paths = list(nx.shortest_simple_paths(
+                    self.graph, src, dst, weight='bandwidth'))
             elif self.weight == self.WEIGHT_MODEL['delay']:
-                simple_paths = list(nx.shortest_simple_paths(self.graph, src, dst, weight='delay'))
+                simple_paths = list(nx.shortest_simple_paths(
+                    self.graph, src, dst, weight='delay'))
         except Exception as e:
             print e
         return simple_paths
@@ -230,7 +243,7 @@ class NetworkAwareness(app_manager.RyuApp):
     def get_graph(self, link_list):
         """
             Create network graph based on hop (default) by using networkx.
-	    Get Adjacency matrix from link_to_port
+            Get Adjacency matrix from link_to_port
         """
         for src in self.switches:
             for dst in self.switches:
@@ -252,8 +265,10 @@ class NetworkAwareness(app_manager.RyuApp):
                 for dst_dpid in self.graph[src_dpid]:
                     if src_dpid == dst_dpid:
                         self.graph[src_dpid][dst_dpid]['bandwidth'] = 0
-                    elif (src_dpid, dst_dpid) in self.link_to_port and src_dpid in self.used_bandwidth and dst_dpid in self.used_bandwidth:
-                        (src_port, dst_port) = self.link_to_port[(src_dpid, dst_dpid)]
+                    elif (src_dpid,
+                          dst_dpid) in self.link_to_port and src_dpid in self.used_bandwidth and dst_dpid in self.used_bandwidth:
+                        (src_port, dst_port) = self.link_to_port[(
+                            src_dpid, dst_dpid)]
                         bw_src = self.used_bandwidth[src_dpid][src_port]
                         bw_dst = self.used_bandwidth[dst_dpid][dst_port]
                         bandwidth = min(bw_src, bw_dst)
@@ -358,10 +373,13 @@ class NetworkAwareness(app_manager.RyuApp):
             Save port's stats info
             Calculate port's speed and save it.
         """
+        # print(" Calculate port's speed and save it.")
         body = ev.msg.body
         dpid = ev.msg.datapath.id
         self.stats['port'][dpid] = body
         self.used_bandwidth.setdefault(dpid, {})
+        self.reserve_bandwidth.setdefault(dpid, {})
+        # print("self reserve_bandwidth is {}".format(self.reserve_bandwidth))
         # self.link_capacity.setdefault(dpid, {})
         for stat in sorted(body, key=attrgetter('port_no')):
             port_no = stat.port_no
@@ -470,7 +488,7 @@ class NetworkAwareness(app_manager.RyuApp):
     def _packet_in_handler(self, ev):
         """
             If the packet_in is ARP, register the access info and install flow by calculating shortestpath.
-	    If the packet_in is ip , install flow by calculating shortestpath.
+            If the packet_in is ip , install flow by calculating shortestpath.
         """
 
         msg = ev.msg
@@ -491,7 +509,8 @@ class NetworkAwareness(app_manager.RyuApp):
         if arp_pkt:
             # Register the access info
             if (datapath.id, in_port) not in self.access_table:
-                self.register_access_info(datapath.id, in_port, arp_pkt.src_ip, arp_pkt.src_mac)
+                self.register_access_info(
+                    datapath.id, in_port, arp_pkt.src_ip, arp_pkt.src_mac)
 
             # Detect arp spoofing attack
             elif self.SPOOFING_DEFENCE:
@@ -515,7 +534,8 @@ class NetworkAwareness(app_manager.RyuApp):
         if ip_pkt:
             # Register the access info
             if (datapath.id, in_port) not in self.access_table:
-                self.register_access_info(datapath.id, in_port, ip_pkt.src, src_mac)
+                self.register_access_info(
+                    datapath.id, in_port, ip_pkt.src, src_mac)
             # Detect ip spoofing attack
             elif self.SPOOFING_DEFENCE:
                 if (ip_pkt.src, src_mac) != self.access_table[datapath.id, in_port]:
@@ -590,8 +610,10 @@ class NetworkAwareness(app_manager.RyuApp):
         # inter_link
         if len(path) > 2:
             for i in xrange(1, len(path) - 1):
-                (pre_dp_port, now_dp_in_port) = self.link_to_port[(path[i - 1], path[i])]
-                (now_dp_out_port, lat_dp_port) = self.link_to_port[(path[i], path[i + 1])]
+                (pre_dp_port, now_dp_in_port) = self.link_to_port[(
+                    path[i - 1], path[i])]
+                (now_dp_out_port, lat_dp_port) = self.link_to_port[(
+                    path[i], path[i + 1])]
                 if now_dp_in_port and now_dp_out_port:
                     src_port, dst_port = now_dp_in_port, now_dp_out_port
                     mid_dp = datapaths[path[i]]
@@ -623,7 +645,8 @@ class NetworkAwareness(app_manager.RyuApp):
             self.send_flow_mod(first_dp, flow_info, in_port, out_port)
             self.send_flow_mod(first_dp, back_info, out_port, in_port)
             if isforward:
-                self.send_packet_out(first_dp, buffer_id, in_port, out_port, data)
+                self.send_packet_out(first_dp, buffer_id,
+                                     in_port, out_port, data)
 
         else:
             # src and dst on the same datapath
@@ -634,8 +657,9 @@ class NetworkAwareness(app_manager.RyuApp):
             self.send_flow_mod(first_dp, flow_info, in_port, out_port)
             self.send_flow_mod(first_dp, back_info, out_port, in_port)
             if isforward:
-                self.send_packet_out(first_dp, buffer_id, in_port, out_port, data)
-
+                self.send_packet_out(first_dp, buffer_id,
+                                     in_port, out_port, data)
+        print("path complete")
     def flood(self, msg):
         """
             Flood ARP packet to the access port which has no record of host.
@@ -712,7 +736,8 @@ class NetworkAwareness(app_manager.RyuApp):
             in_port=src_port, eth_type=flow_info[0],
             ipv4_src=flow_info[1], ipv4_dst=flow_info[2])
 
-        self.add_flow(datapath, 1, match, actions, idle_timeout=15, hard_timeout=0)
+        self.add_flow(datapath, 1, match, actions,
+                      idle_timeout=15, hard_timeout=0)
 
     def shortest_forwarding(self, msg, eth_type, ip_src, ip_dst):
         """
@@ -727,7 +752,8 @@ class NetworkAwareness(app_manager.RyuApp):
         dst_sw_key = self.get_host_location(ip_dst)
         if src_sw_key and dst_sw_key:
             # Path has already calculated, just get it.
-            path = self.get_path(src_sw_key[0], dst_sw_key[0], weight=self.weight)
+            path = self.get_path(
+                src_sw_key[0], dst_sw_key[0], weight=self.weight)
             flow_info = (eth_type, ip_src, ip_dst, in_port)
             # install flow entries to datapath along side the path.
             self.install_flow(self.datapaths,
@@ -785,7 +811,7 @@ class NetworkAwareness(app_manager.RyuApp):
             except:
                 self.logger.debug('no ratio shortest_paths!')
                 return
-    
+
     def get_host_location(self, host_ip):
         """
             Get host location info:(datapath, port) according to host ip.
@@ -845,12 +871,14 @@ class NetworkAwareness(app_manager.RyuApp):
 
     def _save_freebandwidth(self, dpid, port_no, speed):
         # Calculate free bandwidth of port and save it.
+        # self.logger.info("Calculate free bandwidth of port and save it.dpid{}  port_no{}  speed{}".format(dpid,port_no,speed))
         port_feature = self.port_features.get(dpid).get(port_no)
         if port_feature:
             # capacity = port_feature[2]  # get the port's curr_speed(that means port's max link capacity [kbps])
             # self.link_capacity[dpid].setdefault(port_no, None)
             # self.link_capacity[dpid][port_no] = capacity  / 10 ** 3  # Mbit/s
             self.used_bandwidth[dpid].setdefault(port_no, None)
+            self.reserve_bandwidth[dpid].setdefault(port_no, {})
             self.used_bandwidth[dpid][port_no] = speed * 8 / 10 ** 6  # Mbit/s
         else:
             self.logger.info("Fail in getting port state")
@@ -888,28 +916,119 @@ class NetworkAwareness(app_manager.RyuApp):
                          5: {1: 100, 2: 50, 3: 50}}
         free_bw = 100  # init
 
+        # 都改成了减去预留带宽
         try:
-            src_access_switch, src_access_port = self.get_host_location(src_ip)
+            src_access_switch, src_access_port = self.get_host_location(src_ip)  # 访问的主机和主机连接的交换机的端口
             src_access_free_bw = max_bandwidth[src_access_switch][src_access_port] - \
                                  self.used_bandwidth[src_access_switch][src_access_port]
             free_bw = min(free_bw, src_access_free_bw)
+            # free_bw = min(free_bw, src_access_free_bw)-self.get_path_reserve_bw(src_access_switch, src_access_port)
 
             for i in range(len(switch_path) - 1):
-                port1, port2 = self.link_to_port[(switch_path[i], switch_path[i + 1])]
-                port1_free_bw = max_bandwidth[switch_path[i]][port1] - self.used_bandwidth[switch_path[i]][port1]
+                port1, port2 = self.link_to_port[(
+                    switch_path[i], switch_path[i + 1])]
+                # 剩余容量 = 交换机端口的最大容量-交换机端口的使用容量
+                port1_free_bw = max_bandwidth[switch_path[i]][port1] - \
+                                self.used_bandwidth[switch_path[i]][port1]
                 free_bw = min(free_bw, port1_free_bw)
-                port2_free_bw = max_bandwidth[switch_path[i + 1]][port2] - self.used_bandwidth[switch_path[i + 1]][port2]
+                # free_bw = min(free_bw, port1_free_bw)-self.get_path_reserve_bw(switch_path[i], port1)
+                port2_free_bw = max_bandwidth[switch_path[i + 1]][port2] - \
+                                self.used_bandwidth[switch_path[i + 1]][port2]
                 free_bw = min(free_bw, port2_free_bw)
-
+                # free_bw = min(free_bw, port2_free_bw)-self.get_path_reserve_bw(switch_path[i + 1], port2)
             dst_access_switch, dst_access_port = self.get_host_location(dst_ip)
             dst_access_free_bw = max_bandwidth[dst_access_switch][dst_access_port] - \
                                  self.used_bandwidth[dst_access_switch][dst_access_port]
             free_bw = min(free_bw, dst_access_free_bw)
+            # free_bw = min(free_bw, dst_access_free_bw) - self.get_path_reserve_bw(dst_access_switch, dst_access_port)
 
             free_bw = 0 if free_bw < 0 else free_bw
             return free_bw
         except Exception as e:
             pass
+
+    def reset_values_for_hostname(self, hostname):
+        try:
+            for dpid in self.reserve_bandwidth:
+                for port in self.reserve_bandwidth[dpid]:
+                    if hostname in self.reserve_bandwidth[dpid][port]:
+                        self.reserve_bandwidth[dpid][port][hostname] = 0
+        except Exception as e:
+            print("Error while resetting values:", e)
+
+    def get_path_reserve_bw(self, dpid, port):
+        # 获取指定dpid的字典，如果不存在，返回空字典
+        try:
+            dpid_dict = self.reserve_bandwidth.get(dpid, {})
+            if dpid_dict is None:
+                return 0
+            # 获取指定port的字典，如果不存在，返回空字典
+            port_dict = dpid_dict.get(port, {})
+            if dpid_dict is None:
+                return 0
+            # 提取port字典中的所有值
+            all_values = port_dict.values() if port_dict is not None else []
+
+            # 计算所有值的总和
+            total_intvalue = sum(all_values)
+            return total_intvalue
+
+        except Exception as e:
+            print("发生异常: {}".format(str(e)))
+            traceback.print_exc()
+            return 0
+
+    def get_reserve_bw(self, src_ip):
+        '''
+        return src_ip user reserve bandwidth
+        '''
+        src_access_switch, src_access_port = self.get_host_location(src_ip)  # 访问的主机和主机连接的交换机的端口
+        try:
+            self.reserve_bandwidth[src_access_switch][src_access_port].setdefault(src_ip, 0)
+            return self.reserve_bandwidth[src_access_switch][src_access_port][src_ip]
+        except Exception as e:
+            print("发生异常: {}".format(str(e)))
+            traceback.print_exc()
+            return 0
+
+    def set_reserve_bw(self, src_ip, switch_path, dst_ip, reserve_bw):
+        '''
+                free bandwidth of a path depends on the least remaining bandwidth of those ports through the path
+                :param src_ip: str type, eg: '10.0.0.1'
+                :param switch_path: list type, eg: [1, 2, 5]
+                :param dst_ip: str type, eg: '10.0.0.3'
+                :return:
+                '''
+        print("set_reserve src is {},dst is {},bw is {}, path is{}".format(src_ip, dst_ip, reserve_bw, switch_path))
+        self.reset_values_for_hostname(src_ip)  # 先清空原先的分配，再进行新的分配
+        try:
+            src_access_switch, src_access_port = self.get_host_location(src_ip)  # 访问的主机和主机连接的交换机的端口
+            if self.reserve_bandwidth[src_access_switch][src_access_port].setdefault(src_ip, reserve_bw) != reserve_bw:
+                self.reserve_bandwidth[src_access_switch][src_access_port][src_ip] = reserve_bw
+
+            for i in range(len(switch_path) - 1):
+                port1, port2 = self.link_to_port[(
+                    switch_path[i], switch_path[i + 1])]
+                if self.reserve_bandwidth[switch_path[i]][port1].setdefault(src_ip, reserve_bw) != reserve_bw:
+                    self.reserve_bandwidth[switch_path[i]][port1][src_ip] = reserve_bw
+
+                if self.reserve_bandwidth[switch_path[i + 1]][port2].setdefault(src_ip, reserve_bw) != reserve_bw:
+                    self.reserve_bandwidth[switch_path[i + 1]][port2][src_ip] = reserve_bw
+
+            dst_access_switch, dst_access_port = self.get_host_location(dst_ip)
+            if self.reserve_bandwidth[dst_access_switch][dst_access_port].setdefault(src_ip, reserve_bw) != reserve_bw:
+                self.reserve_bandwidth[dst_access_switch][dst_access_port][src_ip] = reserve_bw
+
+            self.print_reserve_bw()
+        except Exception as e:
+            print("发生异常: {}".format(str(e)))
+            traceback.print_exc()
+            pass
+
+    def print_reserve_bw(self):
+        print("---------------------------------------")
+        print(self.reserve_bandwidth)
+        print("----------------------------------------")
 
     # TODO: following wrong example also works]
     # curl -X POST -d '{"path":"10.0.0.1-->s1-->s2-->10.0.0.3"}' http://10.0.0.4:8080/network/query-delay
@@ -927,7 +1046,8 @@ class NetworkAwareness(app_manager.RyuApp):
             path_delay = 0
             # delay = self.graph[src][dst]['delay']
             for i in range(len(switch_path) - 1):
-                path_delay += self.graph[switch_path[i]][switch_path[i + 1]]['delay']
+                path_delay += self.graph[switch_path[i]
+                ][switch_path[i + 1]]['delay']
             return path_delay
         except Exception as e:
             pass
@@ -947,7 +1067,7 @@ class NetworkAwareness(app_manager.RyuApp):
         src echo latency|        |dst echo latency
                         |        |
                    SwitchA-------SwitchB
-                        
+
                     fwd_delay--->
                         <----reply_delay
             delay = (forward delay + reply delay - src datapath's echo latency
@@ -1112,7 +1232,73 @@ class NetworkAwareness(app_manager.RyuApp):
         for src in self.graph:
             for dst in self.graph[src]:
                 delay = self.graph[src][dst]['delay']
-                self.logger.info("   %s <------> %s      : %-20s" % (src, dst, delay))
+                self.logger.info("   %s <------> %s      : %-20s" %
+                                 (src, dst, delay))
+
+    # TODO: following wrong example also works
+    # curl -X POST -d '{"path":"10.0.0.1-->s1-->s2-->10.0.0.3"}' http://10.0.0.4:8080/network/query-remaining-bandwidth
+    def get_path_free_bw_by_reserve(self, src_ip, switch_path, dst_ip):
+        '''
+        free bandwidth of a path depends on the least remaining bandwidth of those ports through the path
+        :param src_ip: str type, eg: '10.0.0.1'
+        :param switch_path: list type, eg: [1, 2, 5]
+        :param dst_ip: str type, eg: '10.0.0.3'
+        :return:
+        '''
+        # already know h1-s1port1, h2-s1port2, h3-s5port1
+        # max_bandwidth is defined in mininet topo file
+        max_bandwidth = {1: {1: 100, 2: 100, 3: 50, 4: 50, 5: 50},
+                         2: {1: 50, 2: 50},
+                         3: {1: 50, 2: 50},
+                         4: {1: 50, 2: 50},
+                         5: {1: 100, 2: 50, 3: 50}}
+        free_bw = 100  # init
+
+        # 都改成了减去预留带宽
+        try:
+            src_access_switch, src_access_port = self.get_host_location(src_ip)  # 访问的主机和主机连接的交换机的端口
+            src_access_free_bw = max_bandwidth[src_access_switch][src_access_port] - \
+                                 self.used_bandwidth[src_access_switch][src_access_port] - self.get_path_reserve_bw(
+                src_access_switch,
+                src_access_port)
+            if self.used_bandwidth[src_access_switch][src_access_port] != 0:
+                src_access_free_bw += self.get_reserve_bw(src_ip)
+            # free_bw = min(free_bw, src_access_free_bw)
+            free_bw = min(free_bw, src_access_free_bw)
+
+            for i in range(len(switch_path) - 1):
+                port1, port2 = self.link_to_port[(
+                    switch_path[i], switch_path[i + 1])]
+                # 剩余容量 = 交换机端口的最大容量-交换机端口的使用容量
+                port1_free_bw = max_bandwidth[switch_path[i]][port1] - \
+                                self.used_bandwidth[switch_path[i]][port1] - self.get_path_reserve_bw(switch_path[i],
+                                                                                                      port1)
+                if self.used_bandwidth[switch_path[i]][port1] != 0:
+                    port1_free_bw += self.get_reserve_bw(src_ip)
+                free_bw = min(free_bw, port1_free_bw)
+                port2_free_bw = max_bandwidth[switch_path[i + 1]][port2] - \
+                                self.used_bandwidth[switch_path[i + 1]][port2] - self.get_path_reserve_bw(
+                    switch_path[i + 1], port2)
+                if self.used_bandwidth[switch_path[i + 1]][port2] != 0:
+                    port2_free_bw += self.get_reserve_bw(src_ip)
+                free_bw = min(free_bw, port2_free_bw)
+
+            dst_access_switch, dst_access_port = self.get_host_location(dst_ip)
+            dst_access_free_bw = max_bandwidth[dst_access_switch][dst_access_port] - \
+                                 self.used_bandwidth[dst_access_switch][dst_access_port] - self.get_path_reserve_bw(
+                dst_access_switch,
+                dst_access_port)
+            # free_bw = min(free_bw, dst_access_free_bw)
+            if self.used_bandwidth[dst_access_switch][dst_access_port] != 0:
+                dst_access_free_bw += self.get_reserve_bw(src_ip)
+
+            free_bw = min(free_bw, dst_access_free_bw)
+
+            free_bw = 0 if free_bw < 0 else free_bw
+            return free_bw
+        except Exception as e:
+            print(str(e))
+            pass
 
 
 class NetworkController(ControllerBase):
@@ -1237,7 +1423,8 @@ class NetworkController(ControllerBase):
             if req.body:
                 dst_ip = eval(req.body)['dst_ip']
                 path_raw = eval(req.body)['path']  # path_raw = '[1,3,4,5]'
-                path = path_raw.strip('[]').split(',')  # path = ['1','3','4','5']
+                path = path_raw.strip('[]').split(
+                    ',')  # path = ['1','3','4','5']
                 for i in range(len(path)):
                     path[i] = int(path[i])
                 print "req.body.dst_ip = ", dst_ip  # dst_ip = 10.0.0.3
@@ -1290,11 +1477,20 @@ class NetworkController(ControllerBase):
             if req.body:
                 path_raw = eval(req.body)['path']
                 print 'path_raw = ', path_raw  # path_raw = '10.0.0.1-->s1-->s2-->s5-->10.0.0.3'
-                src_ip = path_raw.replace('s', '').split('-->')[0]  # src_ip = '10.0.0.1'
-                switch_path = path_raw.replace('s', '').split('-->')[1:-1]  # switch_path = ['1', '2', '5']
-                switch_path = [int(x) for x in switch_path]  # switch_path = [1, 2, 5]
-                dst_ip = path_raw.replace('s', '').split('-->')[-1]  # dst_ip = '10.0.0.3'
-                free_bw = self.network_app.get_path_free_bw(src_ip, switch_path, dst_ip)
+                src_ip = path_raw.replace('s', '').split(
+                    '-->')[0]  # src_ip = '10.0.0.1'
+                switch_path = path_raw.replace('s', '').split(
+                    '-->')[1:-1]  # switch_path = ['1', '2', '5']
+                # switch_path = [1, 2, 5]
+                switch_path = [int(x) for x in switch_path]
+                dst_ip = path_raw.replace('s', '').split(
+                    '-->')[-1]  # dst_ip = '10.0.0.3'
+                # 原剩余带宽统计方法，现在为了可以预留带宽都使用下面这个计算方法，剩余带宽= 最大带宽 - 使用带宽 - 预留带宽，
+                # 实际上除了打流的时候使用带宽都为0，个人认为可以直接用剩余带宽 = 最大带宽 - 预留带宽代替
+                # free_bw = self.network_app.get_path_free_bw(
+                #     src_ip, switch_path, dst_ip)
+                free_bw = self.network_app.get_path_free_bw_by_reserve(
+                    src_ip, switch_path, dst_ip)
                 if free_bw is None:
                     body = json.dumps('Illegal path !')
                     return Response(content_type='application/json', body=body, status=400)
@@ -1333,12 +1529,18 @@ class NetworkController(ControllerBase):
             if req.body:
                 path_raw = eval(req.body)['path']
                 print 'path_raw = ', path_raw  # path_raw = '10.0.0.1-->s1-->s2-->s5-->10.0.0.3'
-                src_ip = path_raw.replace('s', '').split('-->')[0]  # src_ip = '10.0.0.1'
-                switch_path = path_raw.replace('s', '').split('-->')[1:-1]  # switch_path = ['1', '2', '5']
-                switch_path = [int(x) for x in switch_path]  # switch_path = [1, 2, 5]
-                dst_ip = path_raw.replace('s', '').split('-->')[-1]  # dst_ip = '10.0.0.3'
+                # really is path_raw = '10.0.0.1-->s1-->2-->5-->10.0.0.3'
+                src_ip = path_raw.replace('s', '').split(
+                    '-->')[0]  # src_ip = '10.0.0.1'
+                switch_path = path_raw.replace('s', '').split(
+                    '-->')[1:-1]  # switch_path = ['1', '2', '5']
+                # switch_path = [1, 2, 5]
+                switch_path = [int(x) for x in switch_path]
+                dst_ip = path_raw.replace('s', '').split(
+                    '-->')[-1]  # dst_ip = '10.0.0.3'
                 # free_bw = self.network_app.get_path_free_bw(src_ip, switch_path, dst_ip)
-                path_delay = self.network_app.get_path_delay(src_ip, switch_path, dst_ip)
+                path_delay = self.network_app.get_path_delay(
+                    src_ip, switch_path, dst_ip)
                 if path_delay is None:
                     body = json.dumps('Illegal path !')
                     return Response(content_type='application/json', body=body, status=400)
@@ -1350,3 +1552,104 @@ class NetworkController(ControllerBase):
             print "Parameters illegal !"
             body = json.dumps('Illegal path !')
             return Response(content_type='application/json', body=body, status=400)
+
+    @route('network', '/network/reserve', methods=['POST'])
+    def reserve_bandwidth(self, req, **kwargs):
+        # command example:
+        #
+        #   curl -X POST -d '{"path":"10.0.0.1-->s1-->s2-->s5-->10.0.0.3","reserve_bw":10}' http://<nat0ip>:8080/network/query-delay
+        #
+        # guarantee legal parameters
+        try:
+            if req.body:
+
+                req_body = json.loads(req.body)
+                print(req_body)
+                path_raw = req_body['path']
+                want_reserve_bw = int(req_body['reserve_bw'])  # int, bandwidth type is int, set by client input
+                src_ip = path_raw.replace('s', '').split(
+                    '-->')[0]  # src_ip = '10.0.0.1'
+                switch_path = path_raw.replace('s', '').split(
+                    '-->')[1:-1]  # switch_path = ['1', '2', '5']
+                # switch_path = [1, 2, 5]
+                switch_path = [int(x) for x in switch_path]
+                dst_ip = path_raw.replace('s', '').split(
+                    '-->')[-1]  # dst_ip = '10.0.0.3'
+                # free_bw = self.network_app.get_path_free_bw(
+                #     src_ip, switch_path, dst_ip)
+                free_bw = self.network_app.get_path_free_bw_by_reserve(
+                    src_ip, switch_path, dst_ip)
+                print("free_bw is {}".format(free_bw))
+                if free_bw is None:
+                    data = {"done": "false", "message": "Illegal path error"}
+                    body = json.dumps(data)
+                    return Response(content_type='application/json', body=body, status=404)
+                    # 预留资源 return true,200 or false,200
+
+                old_reserve_bw = self.network_app.get_reserve_bw(src_ip)
+                print("old bw is {}".format(old_reserve_bw))
+                self.network_app.print_reserve_bw()
+                if old_reserve_bw > want_reserve_bw:  # 如果旧的拥有带宽已经大于现在的想要的带宽，那么直接就可以分配了
+                    self.network_app.set_reserve_bw(src_ip, switch_path, dst_ip, want_reserve_bw)
+                    data = {"done": "true", "message": "Bandwidth reservation success"}
+                    body = json.dumps(data)
+                    return Response(content_type='application/json', body=body, status=200)
+                elif free_bw + old_reserve_bw > want_reserve_bw:  # 如果旧的拥有带宽+剩余带宽大于现在的想要的带宽，也可以分配了
+                    self.network_app.set_reserve_bw(src_ip, switch_path, dst_ip, want_reserve_bw)
+                    data = {"done": "true", "message": "Bandwidth reservation success"}
+                    body = json.dumps(data)
+                    return Response(content_type='application/json', body=body, status=200)
+                else:
+                    data = {"done": "false", "message": "Not enough bandwidth to reserve"}
+                    body = json.dumps(data)
+                    return Response(content_type='application/json', body=body, status=501)
+
+        except ValueError:
+            data = {"done": "false", "message": "Server error"}
+            body = json.dumps(data)
+            return Response(content_type='application/json', body=body, status=501)
+
+    @route('network', '/network/allocate', methods=['POST'])
+    def allocate_bandwidth(self, req, **kwargs):
+        # command example:
+        #
+        #   curl -X POST -d '{"path":"10.0.0.1-->s1-->s2-->s5-->10.0.0.3","reserve_bw":10}' http://<nat0ip>:8080/network/query-delay
+        #
+        # guarantee legal parameters
+        # 太久没有看sdn了，最好的做法是在这里直接在这里直接为主机和交换机的端口添加流表
+        # 现在是在mininet主机里面内嵌了ovs-vsctl来控制（皓琳师兄的做法）
+        data = {"done": "true", "message": "Resource allocation completed"}
+        body = json.dumps(data)
+        return Response(content_type='application/json', body=body, status=200)
+
+    @route('network', '/network/cancel', methods=['POST'])
+    def cancel_reserver_bandwidth(self, req, **kwargs):
+        # command example:
+        #
+        #   curl -X POST -d '{"path":"10.0.0.1-->s1-->s2-->s5-->10.0.0.3","reserve_bw":10}' http://<nat0ip>:8080/network/query-delay
+        #
+        # guarantee legal parameters
+        # 太久没有看sdn了，最好的做法是在这里直接在这里直接为主机和交换机的端口添加流表
+        # 现在是在mininet主机里面内嵌了ovs-vsctl来控制（皓琳师兄的做法）
+        try:
+            if req.body:
+                req_body = json.loads(req.body)
+                print(req_body)
+                path_raw = req_body['path']
+                src_ip = path_raw.replace('s', '').split(
+                    '-->')[0]  # src_ip = '10.0.0.1'
+                switch_path = path_raw.replace('s', '').split(
+                    '-->')[1:-1]  # switch_path = ['1', '2', '5']
+                # switch_path = [1, 2, 5]
+                switch_path = [int(x) for x in switch_path]
+                dst_ip = path_raw.replace('s', '').split(
+                    '-->')[-1]  # dst_ip = '10.0.0.3'
+                # free_bw = self.network_app.get_path_free_bw(
+                #     src_ip, switch_path, dst_ip)
+                self.network_app.reset_values_for_hostname(src_ip)  # 取消所有预留的带宽
+        except Exception as e:
+            print("发生异常: {}".format(str(e)))
+            traceback.print_exc()
+        data = {"done": "true", "message": "Resource allocation completed"}
+        body = json.dumps(data)
+        return Response(content_type='application/json', body=body, status=200)
