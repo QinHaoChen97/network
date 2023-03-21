@@ -24,6 +24,7 @@ from ryu.lib.packet import arp
 from ryu.lib.packet import lldp
 from ryu.lib import hub
 from ryu.lib import dpid as dpid_lib
+from ryu.lib.packet import icmp
 
 from ryu.topology import event, switches
 from ryu.topology.switches import Switches
@@ -94,6 +95,7 @@ class NetworkAwareness(app_manager.RyuApp):
         # self.monitor_thread = hub.spawn(self._monitor)
         # self.save_freebandwidth_thread = hub.spawn(self._save_bw_graph)
         # self.detector_thread = hub.spawn(self._detector)
+        self.user_choose_path = {}  # 用户存储的选择路径
 
     def _discover(self):
         """
@@ -505,6 +507,7 @@ class NetworkAwareness(app_manager.RyuApp):
         arp_pkt = pkt.get_protocol(arp.arp)
         ip_pkt = pkt.get_protocol(ipv4.ipv4)
         lldp_pkt = pkt.get_protocol(lldp.lldp)
+        icmp_pkt = pkt.get_protocol(icmp.icmp)
 
         if arp_pkt:
             # Register the access info
@@ -554,6 +557,7 @@ class NetworkAwareness(app_manager.RyuApp):
                     return
 
             if len(pkt.get_protocols(ethernet.ethernet)):
+                print("short path")
                 self.shortest_forwarding(msg, eth_type, ip_pkt.src, ip_pkt.dst)
                 return
 
@@ -596,7 +600,7 @@ class NetworkAwareness(app_manager.RyuApp):
                      flow_info, buffer_id, data=None, isforward=True):
         ''' 
             Install flow entires for roundtrip: go and back.
-            @parameter: path=[dpid1, dpid2...]
+            @parameter: path=[dpid1, dpid2...]  ex. [1,3,5]
                         flow_info=(eth_type, src_ip, dst_ip, in_port)
         '''
         if path is None or len(path) == 0:
@@ -660,6 +664,7 @@ class NetworkAwareness(app_manager.RyuApp):
                 self.send_packet_out(first_dp, buffer_id,
                                      in_port, out_port, data)
         print("path complete")
+
     def flood(self, msg):
         """
             Flood ARP packet to the access port which has no record of host.
@@ -754,8 +759,13 @@ class NetworkAwareness(app_manager.RyuApp):
             # Path has already calculated, just get it.
             path = self.get_path(
                 src_sw_key[0], dst_sw_key[0], weight=self.weight)
-            flow_info = (eth_type, ip_src, ip_dst, in_port)
+            flow_info = (eth_type, ip_src, ip_dst, in_port)  # ip_src = '10.0.0.*'
+            if self.user_choose_path.setdefault(ip_src, None):  # 如果用户已经选择了自己想要的路径，那么不会再触发最短路径
+                if self.user_choose_path[ip_src] != None:
+                    path = self.user_choose_path[ip_src]
+
             # install flow entries to datapath along side the path.
+            print("install flow")
             self.install_flow(self.datapaths,
                               self.link_to_port,
                               self.access_table, path,
@@ -1429,6 +1439,8 @@ class NetworkController(ControllerBase):
                     path[i] = int(path[i])
                 print "req.body.dst_ip = ", dst_ip  # dst_ip = 10.0.0.3
                 print "req.body.path = ", path  # path = [1, 3, 4, 5]
+                self.network_app.user_choose_path.setdefault(user_ip, None)
+                self.network_app.user_choose_path[user_ip] = path
         except ValueError:
             print "Parameters illegal !"
             return Response(status=400)
@@ -1494,7 +1506,7 @@ class NetworkController(ControllerBase):
                 if free_bw is None:
                     body = json.dumps('Illegal path !')
                     return Response(content_type='application/json', body=body, status=400)
-                print "current path free bandwidth = ", free_bw
+                # print "current path free bandwidth = ", free_bw
                 data = {"free_bw": free_bw}
                 body = json.dumps(data)
                 return Response(content_type='application/json', body=body)
@@ -1544,7 +1556,7 @@ class NetworkController(ControllerBase):
                 if path_delay is None:
                     body = json.dumps('Illegal path !')
                     return Response(content_type='application/json', body=body, status=400)
-                print "current path delay = ", path_delay
+                # print "current path delay = ", path_delay
                 data = {"path_delay": path_delay}
                 body = json.dumps(data)
                 return Response(content_type='application/json', body=body)
@@ -1579,7 +1591,7 @@ class NetworkController(ControllerBase):
                 #     src_ip, switch_path, dst_ip)
                 free_bw = self.network_app.get_path_free_bw_by_reserve(
                     src_ip, switch_path, dst_ip)
-                print("free_bw is {}".format(free_bw))
+                # print("free_bw is {}".format(free_bw))
                 if free_bw is None:
                     data = {"done": "false", "message": "Illegal path error"}
                     body = json.dumps(data)
@@ -1587,7 +1599,7 @@ class NetworkController(ControllerBase):
                     # 预留资源 return true,200 or false,200
 
                 old_reserve_bw = self.network_app.get_reserve_bw(src_ip)
-                print("old bw is {}".format(old_reserve_bw))
+                # print("old bw is {}".format(old_reserve_bw))
                 self.network_app.print_reserve_bw()
                 if old_reserve_bw > want_reserve_bw:  # 如果旧的拥有带宽已经大于现在的想要的带宽，那么直接就可以分配了
                     self.network_app.set_reserve_bw(src_ip, switch_path, dst_ip, want_reserve_bw)
@@ -1631,6 +1643,7 @@ class NetworkController(ControllerBase):
         # guarantee legal parameters
         # 太久没有看sdn了，最好的做法是在这里直接在这里直接为主机和交换机的端口添加流表
         # 现在是在mininet主机里面内嵌了ovs-vsctl来控制（皓琳师兄的做法）
+        print("cancel reserver bandwidth")
         try:
             if req.body:
                 req_body = json.loads(req.body)
