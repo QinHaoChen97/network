@@ -1,0 +1,140 @@
+[2023-04-04 12:23:16.246032]DETECTING IP SPOOFING ATTACK : switch 1 port 5 received an illegal packet !!!
+----------------------------Registered host    ip = 10.0.0.4, mac = 00:00:00:00:00:04
+----------------------------Illegal packet src_ip = 8.8.8.8, src_mac = 00:00:00:00:00:04
+
+[2023-04-04 12:23:16.247022]DETECTING IP SPOOFING ATTACK : switch 1 port 5 received an illegal packet !!!
+----------------------------Registered host    ip = 10.0.0.4, mac = 00:00:00:00:00:04
+----------------------------Illegal packet src_ip = 8.8.8.8, src_mac = 00:00:00:00:00:04
+
+[2023-04-04 12:23:16.251149]DETECTING IP SPOOFING ATTACK : switch 1 port 5 received an illegal packet !!!
+----------------------------Registered host    ip = 10.0.0.4, mac = 00:00:00:00:00:04
+----------------------------Illegal packet src_ip = 8.8.8.8, src_mac = 00:00:00:00:00:04
+
+[2023-04-04 12:23:21.249153]DETECTING IP SPOOFING ATTACK : switch 1 port 5 received an illegal packet !!!
+----------------------------Registered host    ip = 10.0.0.4, mac = 00:00:00:00:00:04
+----------------------------Illegal packet src_ip = 8.8.8.8, src_mac = 00:00:00:00:00:04
+
+[2023-04-04 12:23:21.250253]DETECTING IP SPOOFING ATTACK : switch 1 port 5 received an illegal packet !!!
+----------------------------Registered host    ip = 10.0.0.4, mac = 00:00:00:00:00:04
+----------------------------Illegal packet src_ip = 8.8.8.8, src_mac = 00:00:00:00:00:04
+
+[2023-04-04 12:23:21.267471]DETECTING IP SPOOFING ATTACK : switch 1 port 5 received an illegal packet !!!
+----------------------------Registered host    ip = 10.0.0.4, mac = 00:00:00:00:00:04
+----------------------------Illegal packet src_ip = 8.8.8.8, src_mac = 00:00:00:00:00:04
+
+[2023-04-04 12:23:26.255380]DETECTING IP SPOOFING ATTACK : switch 1 port 5 received an illegal packet !!!
+----------------------------Registered host    ip = 10.0.0.4, mac = 00:00:00:00:00:04
+----------------------------Illegal packet src_ip = 8.8.8.8, src_mac = 00:00:00:00:00:04
+
+[2023-04-04 12:23:31.255960]DETECTING IP SPOOFING ATTACK : switch 1 port 5 received an illegal packet !!!
+----------------------------Registered host    ip = 10.0.0.4, mac = 00:00:00:00:00:04
+----------------------------Illegal packet src_ip = 8.8.8.8, src_mac = 00:00:00:00:00:04
+
+[2023-04-04 12:23:31.278730]DETECTING IP SPOOFING ATTACK : switch 1 port 5 received an illegal packet !!!
+----------------------------Registered host    ip = 10.0.0.4, mac = 00:00:00:00:00:04
+----------------------------Illegal packet src_ip = 8.8.8.8, src_mac = 00:00:00:00:00:04
+
+[2023-04-04 12:23:36.292644]DETECTING IP SPOOFING ATTACK : switch 1 port 5 received an illegal packet !!!
+----------------------------Registered host    ip = 10.0.0.4, mac = 00:00:00:00:00:04
+----------------------------Illegal packet src_ip = 8.8.8.8, src_mac = 00:00:00:00:00:04
+
+[2023-04-04 12:23:36.294067]DETECTING IP SPOOFING ATTACK : switch 1 port 5 received an illegal packet !!!
+----------------------------Registered host    ip = 10.0.0.4, mac = 00:00:00:00:00:04
+----------------------------Illegal packet src_ip = 8.8.8.8, src_mac = 00:00:00:00:00:04
+
+[2023-04-04 12:23:41.271347]DETECTING IP SPOOFING ATTACK : switch 1 port 5 received an illegal packet !!!
+----------------------------Registered host    ip = 10.0.0.4, mac = 00:00:00:00:00:04
+----------------------------Illegal packet src_ip = 8.8.8.8, src_mac = 00:00:00:00:00:04
+
+[2023-04-04 12:23:41.272487]DETECTING IP SPOOFING ATTACK : switch 1 port 5 received an illegal packet !!!
+----------------------------Registered host    ip = 10.0.0.4, mac = 00:00:00:00:00:04
+----------------------------Illegal packet src_ip = 8.8.8.8, src_mac = 00:00:00:00:00:04
+
+[2023-04-04 18:57:19.477229]DETECTING IP SPOOFING ATTACK : switch 1 port 5 received an illegal packet !!!
+----------------------------Registered host    ip = 10.0.0.4, mac = 00:00:00:00:00:04
+----------------------------Illegal packet src_ip = 182.61.200.6, src_mac = 00:00:00:00:00:04
+
+[2023-04-04 18:57:20.495579]DETECTING IP SPOOFING ATTACK : switch 1 port 5 received an illegal packet !!!
+----------------------------Registered host    ip = 10.0.0.4, mac = 00:00:00:00:00:04
+----------------------------Illegal packet src_ip = 182.61.200.6, src_mac = 00:00:00:00:00:04
+
+[2023-04-04 18:57:21.518249]DETECTING IP SPOOFING ATTACK : switch 1 port 5 received an illegal packet !!!
+----------------------------Registered host    ip = 10.0.0.4, mac = 00:00:00:00:00:04
+----------------------------Illegal packet src_ip = 182.61.200.6, src_mac = 00:00:00:00:00:04
+
+[2023-04-04 18:57:22.549987]DETECTING IP SPOOFING ATTACK : switch 1 port 5 received an illegal packet !!!
+----------------------------Registered host    ip = 10.0.0.4, mac = 00:00:00:00:00:04
+----------------------------Illegal packet src_ip = 182.61.200.6, src_mac = 00:00:00:00:00:04
+
+[2023-04-04 18:57:23.566156]DETECTING IP SPOOFING ATTACK : switch 1 port 5 received an illegal packet !!!
+----------------------------Registered host    ip = 10.0.0.4, mac = 00:00:00:00:00:04
+----------------------------Illegal packet src_ip = 182.61.200.6, src_mac = 00:00:00:00:00:04
+
+[2023-04-04 18:57:24.606693]DETECTING IP SPOOFING ATTACK : switch 1 port 5 received an illegal packet !!!
+----------------------------Registered host    ip = 10.0.0.4, mac = 00:00:00:00:00:04
+----------------------------Illegal packet src_ip = 182.61.200.6, src_mac = 00:00:00:00:00:04
+
+[2023-04-04 18:57:25.616161]DETECTING IP SPOOFING ATTACK : switch 1 port 5 received an illegal packet !!!
+----------------------------Registered host    ip = 10.0.0.4, mac = 00:00:00:00:00:04
+----------------------------Illegal packet src_ip = 182.61.200.6, src_mac = 00:00:00:00:00:04
+
+[2023-04-04 19:19:10.190212]DETECTING IP SPOOFING ATTACK : switch 1 port 5 received an illegal packet !!!
+----------------------------Registered host    ip = 10.0.0.4, mac = 00:00:00:00:00:04
+----------------------------Illegal packet src_ip = 8.8.8.8, src_mac = 00:00:00:00:00:04
+
+[2023-04-04 19:19:11.231563]DETECTING IP SPOOFING ATTACK : switch 1 port 5 received an illegal packet !!!
+----------------------------Registered host    ip = 10.0.0.4, mac = 00:00:00:00:00:04
+----------------------------Illegal packet src_ip = 8.8.8.8, src_mac = 00:00:00:00:00:04
+
+[2023-04-04 19:19:12.243593]DETECTING IP SPOOFING ATTACK : switch 1 port 5 received an illegal packet !!!
+----------------------------Registered host    ip = 10.0.0.4, mac = 00:00:00:00:00:04
+----------------------------Illegal packet src_ip = 8.8.8.8, src_mac = 00:00:00:00:00:04
+
+[2023-04-04 19:19:13.266369]DETECTING IP SPOOFING ATTACK : switch 1 port 5 received an illegal packet !!!
+----------------------------Registered host    ip = 10.0.0.4, mac = 00:00:00:00:00:04
+----------------------------Illegal packet src_ip = 8.8.8.8, src_mac = 00:00:00:00:00:04
+
+[2023-04-04 19:19:14.297314]DETECTING IP SPOOFING ATTACK : switch 1 port 5 received an illegal packet !!!
+----------------------------Registered host    ip = 10.0.0.4, mac = 00:00:00:00:00:04
+----------------------------Illegal packet src_ip = 8.8.8.8, src_mac = 00:00:00:00:00:04
+
+[2023-04-04 19:19:15.316597]DETECTING IP SPOOFING ATTACK : switch 1 port 5 received an illegal packet !!!
+----------------------------Registered host    ip = 10.0.0.4, mac = 00:00:00:00:00:04
+----------------------------Illegal packet src_ip = 8.8.8.8, src_mac = 00:00:00:00:00:04
+
+[2023-04-04 19:19:16.346199]DETECTING IP SPOOFING ATTACK : switch 1 port 5 received an illegal packet !!!
+----------------------------Registered host    ip = 10.0.0.4, mac = 00:00:00:00:00:04
+----------------------------Illegal packet src_ip = 8.8.8.8, src_mac = 00:00:00:00:00:04
+
+[2023-04-04 19:19:17.365393]DETECTING IP SPOOFING ATTACK : switch 1 port 5 received an illegal packet !!!
+----------------------------Registered host    ip = 10.0.0.4, mac = 00:00:00:00:00:04
+----------------------------Illegal packet src_ip = 8.8.8.8, src_mac = 00:00:00:00:00:04
+
+[2023-04-04 19:19:18.390442]DETECTING IP SPOOFING ATTACK : switch 1 port 5 received an illegal packet !!!
+----------------------------Registered host    ip = 10.0.0.4, mac = 00:00:00:00:00:04
+----------------------------Illegal packet src_ip = 8.8.8.8, src_mac = 00:00:00:00:00:04
+
+[2023-04-04 19:19:19.426930]DETECTING IP SPOOFING ATTACK : switch 1 port 5 received an illegal packet !!!
+----------------------------Registered host    ip = 10.0.0.4, mac = 00:00:00:00:00:04
+----------------------------Illegal packet src_ip = 8.8.8.8, src_mac = 00:00:00:00:00:04
+
+[2023-04-04 19:19:20.434832]DETECTING IP SPOOFING ATTACK : switch 1 port 5 received an illegal packet !!!
+----------------------------Registered host    ip = 10.0.0.4, mac = 00:00:00:00:00:04
+----------------------------Illegal packet src_ip = 8.8.8.8, src_mac = 00:00:00:00:00:04
+
+[2023-04-04 19:19:21.459876]DETECTING IP SPOOFING ATTACK : switch 1 port 5 received an illegal packet !!!
+----------------------------Registered host    ip = 10.0.0.4, mac = 00:00:00:00:00:04
+----------------------------Illegal packet src_ip = 8.8.8.8, src_mac = 00:00:00:00:00:04
+
+[2023-04-04 19:19:22.482262]DETECTING IP SPOOFING ATTACK : switch 1 port 5 received an illegal packet !!!
+----------------------------Registered host    ip = 10.0.0.4, mac = 00:00:00:00:00:04
+----------------------------Illegal packet src_ip = 8.8.8.8, src_mac = 00:00:00:00:00:04
+
+[2023-04-04 19:19:23.506621]DETECTING IP SPOOFING ATTACK : switch 1 port 5 received an illegal packet !!!
+----------------------------Registered host    ip = 10.0.0.4, mac = 00:00:00:00:00:04
+----------------------------Illegal packet src_ip = 8.8.8.8, src_mac = 00:00:00:00:00:04
+
+[2023-04-04 19:19:24.532596]DETECTING IP SPOOFING ATTACK : switch 1 port 5 received an illegal packet !!!
+----------------------------Registered host    ip = 10.0.0.4, mac = 00:00:00:00:00:04
+----------------------------Illegal packet src_ip = 8.8.8.8, src_mac = 00:00:00:00:00:04
+

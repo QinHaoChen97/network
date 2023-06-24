@@ -472,7 +472,7 @@ class NetworkAwareness(app_manager.RyuApp):
 
             print "switch%d: port %s %s" % (dpid, reason_dict[reason], port_no)
         else:
-            print "switch%d: Illeagal port state %s %s" % (port_no, reason)
+            print "switch%d: Illegal port state %s %s" % (port_no, reason)
 
     @set_ev_cls(ofp_event.EventOFPEchoReply, MAIN_DISPATCHER)
     def echo_reply_handler(self, ev):
@@ -557,7 +557,7 @@ class NetworkAwareness(app_manager.RyuApp):
                     return
 
             if len(pkt.get_protocols(ethernet.ethernet)):
-                print("short path")
+                # print("short path")
                 self.shortest_forwarding(msg, eth_type, ip_pkt.src, ip_pkt.dst)
                 return
 
@@ -622,7 +622,7 @@ class NetworkAwareness(app_manager.RyuApp):
                     src_port, dst_port = now_dp_in_port, now_dp_out_port
                     mid_dp = datapaths[path[i]]
                     self.send_flow_mod(mid_dp, flow_info, src_port, dst_port)
-                    self.send_flow_mod(mid_dp, back_info, dst_port, src_port)
+                    self.send_flow_mod(mid_dp, back_info, dst_port, src_port) # also set backpath
 
         if len(path) > 1:
             # the last datapath flow entry: tor -> host
@@ -741,9 +741,11 @@ class NetworkAwareness(app_manager.RyuApp):
             in_port=src_port, eth_type=flow_info[0],
             ipv4_src=flow_info[1], ipv4_dst=flow_info[2])
 
-        self.add_flow(datapath, 1, match, actions,
-                      idle_timeout=15, hard_timeout=0)
+        # self.add_flow(datapath, 1, match, actions,
+        #               idle_timeout=3600, hard_timeout=0)  # 拉长流表，防止流表过期让打流默认走最短路径
 
+        self.add_flow(datapath, 100, match, actions,
+                      idle_timeout=0, hard_timeout=0)  # 拉长流表，防止流表过期让打流默认走最短路径
     def shortest_forwarding(self, msg, eth_type, ip_src, ip_dst):
         """
             To calculate shortest forwarding path and install them into datapaths.
@@ -760,9 +762,9 @@ class NetworkAwareness(app_manager.RyuApp):
             path = self.get_path(
                 src_sw_key[0], dst_sw_key[0], weight=self.weight)
             flow_info = (eth_type, ip_src, ip_dst, in_port)  # ip_src = '10.0.0.*'
-            if self.user_choose_path.setdefault(ip_src, None):  # 如果用户已经选择了自己想要的路径，那么不会再触发最短路径
-                if self.user_choose_path[ip_src] != None:
-                    path = self.user_choose_path[ip_src]
+            # if self.user_choose_path.setdefault(ip_src, None):  # 如果用户已经选择了自己想要的路径，那么不会再触发最短路径
+            #     if self.user_choose_path[ip_src] != None:
+            #         path = self.user_choose_path[ip_src]
 
             # install flow entries to datapath along side the path.
             print("install flow")
@@ -1009,7 +1011,7 @@ class NetworkAwareness(app_manager.RyuApp):
                 :param dst_ip: str type, eg: '10.0.0.3'
                 :return:
                 '''
-        print("set_reserve src is {},dst is {},bw is {}, path is{}".format(src_ip, dst_ip, reserve_bw, switch_path))
+        print("set_reserve src is {},dst is {},bandwidth is {}, path is{}".format(src_ip, dst_ip, reserve_bw, switch_path))
         self.reset_values_for_hostname(src_ip)  # 先清空原先的分配，再进行新的分配
         try:
             src_access_switch, src_access_port = self.get_host_location(src_ip)  # 访问的主机和主机连接的交换机的端口
@@ -1037,7 +1039,7 @@ class NetworkAwareness(app_manager.RyuApp):
 
     def print_reserve_bw(self):
         print("---------------------------------------")
-        print(self.reserve_bandwidth)
+        self.format_print(self.reserve_bandwidth)
         print("----------------------------------------")
 
     # TODO: following wrong example also works]
@@ -1506,7 +1508,7 @@ class NetworkController(ControllerBase):
                 if free_bw is None:
                     body = json.dumps('Illegal path !')
                     return Response(content_type='application/json', body=body, status=400)
-                # print "current path free bandwidth = ", free_bw
+                print "current path free bandwidth = ", free_bw
                 data = {"free_bw": free_bw}
                 body = json.dumps(data)
                 return Response(content_type='application/json', body=body)
@@ -1556,7 +1558,7 @@ class NetworkController(ControllerBase):
                 if path_delay is None:
                     body = json.dumps('Illegal path !')
                     return Response(content_type='application/json', body=body, status=400)
-                # print "current path delay = ", path_delay
+                print "current path delay = ", path_delay
                 data = {"path_delay": path_delay}
                 body = json.dumps(data)
                 return Response(content_type='application/json', body=body)
@@ -1576,9 +1578,11 @@ class NetworkController(ControllerBase):
             if req.body:
 
                 req_body = json.loads(req.body)
-                print(req_body)
+                #print(req_body)
                 path_raw = req_body['path']
                 want_reserve_bw = int(req_body['reserve_bw'])  # int, bandwidth type is int, set by client input
+                print("query path is {}".format(path_raw))
+                print("query bandwidth is {}".format(want_reserve_bw))
                 src_ip = path_raw.replace('s', '').split(
                     '-->')[0]  # src_ip = '10.0.0.1'
                 switch_path = path_raw.replace('s', '').split(
@@ -1602,16 +1606,20 @@ class NetworkController(ControllerBase):
                 # print("old bw is {}".format(old_reserve_bw))
                 self.network_app.print_reserve_bw()
                 if old_reserve_bw > want_reserve_bw:  # 如果旧的拥有带宽已经大于现在的想要的带宽，那么直接就可以分配了
+                    print("资源预留成功")
                     self.network_app.set_reserve_bw(src_ip, switch_path, dst_ip, want_reserve_bw)
+                    print("Bandwidth reservation success")
                     data = {"done": "true", "message": "Bandwidth reservation success"}
                     body = json.dumps(data)
                     return Response(content_type='application/json', body=body, status=200)
                 elif free_bw + old_reserve_bw > want_reserve_bw:  # 如果旧的拥有带宽+剩余带宽大于现在的想要的带宽，也可以分配了
+                    print("资源预留成功")
                     self.network_app.set_reserve_bw(src_ip, switch_path, dst_ip, want_reserve_bw)
                     data = {"done": "true", "message": "Bandwidth reservation success"}
                     body = json.dumps(data)
                     return Response(content_type='application/json', body=body, status=200)
                 else:
+                    print("资源预留失败")
                     data = {"done": "false", "message": "Not enough bandwidth to reserve"}
                     body = json.dumps(data)
                     return Response(content_type='application/json', body=body, status=501)
@@ -1628,9 +1636,16 @@ class NetworkController(ControllerBase):
         #   curl -X POST -d '{"path":"10.0.0.1-->s1-->s2-->s5-->10.0.0.3","reserve_bw":10}' http://<nat0ip>:8080/network/query-delay
         #
         # guarantee legal parameters
-        # 太久没有看sdn了，最好的做法是在这里直接在这里直接为主机和交换机的端口添加流表
-        # 现在是在mininet主机里面内嵌了ovs-vsctl来控制（皓琳师兄的做法）
-        data = {"done": "true", "message": "Resource allocation completed"}
+        req_body = json.loads(req.body)
+        # print(req_body)
+        # todo:这里直接返回分配成功（皓琳师兄是通过限制交换机端口的接入来实现资源分配控制，这里返回分配成功后由客户端执行ovctl命令实现流量大小控制），
+        #  更好的方法是直接对路径交换机下发openflow流表，通过meter表来实现流量分配！
+        path_raw = req_body['path']
+        want_reserve_bw = int(req_body['reserve_bw'])  # int, bandwidth type is int, set by client input
+        print("Allocation path is {}".format(path_raw))
+        print("Allocation bandwidth is {}Mbps".format(want_reserve_bw))
+        print("Allocation completed")
+        data = {"done": "true", "message": "Bandwidth resources allocated successfully"}
         body = json.dumps(data)
         return Response(content_type='application/json', body=body, status=200)
 
@@ -1643,12 +1658,15 @@ class NetworkController(ControllerBase):
         # guarantee legal parameters
         # 太久没有看sdn了，最好的做法是在这里直接在这里直接为主机和交换机的端口添加流表
         # 现在是在mininet主机里面内嵌了ovs-vsctl来控制（皓琳师兄的做法）
-        print("cancel reserver bandwidth")
+        print("Cancel reserver bandwidth,before canceling, reserve bandwidth is")
+        self.network_app.format_print(self.network_app.reserve_bandwidth)
+
         try:
             if req.body:
                 req_body = json.loads(req.body)
-                print(req_body)
+                #print(req_body)
                 path_raw = req_body['path']
+                print("cancel path is {}".format(path_raw))
                 src_ip = path_raw.replace('s', '').split(
                     '-->')[0]  # src_ip = '10.0.0.1'
                 switch_path = path_raw.replace('s', '').split(
@@ -1663,6 +1681,14 @@ class NetworkController(ControllerBase):
         except Exception as e:
             print("发生异常: {}".format(str(e)))
             traceback.print_exc()
-        data = {"done": "true", "message": "Resource allocation completed"}
+        print("Cancel completed assignments successfully.")
+        print("After canceling, reserve bandwidth is")
+        self.network_app.format_print(self.network_app.reserve_bandwidth)
+        data = {"done": "true", "message": "Cancel completed assignments successfully."}
         body = json.dumps(data)
         return Response(content_type='application/json', body=body, status=200)
+    
+    # todo:定价策略接口
+    @route('network', '/network/price', methods=['POST'])
+    def getprice(self, req, **kwargs):
+        pass
